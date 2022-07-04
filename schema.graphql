@@ -1,48 +1,20 @@
-# type Token @entity {
-#   id: ID!
-#   owner: Owner
-#   uri: String
-#   transfers: [Transfer!]! @derivedFrom(field: "token")
-#   contract: Contract
-# }
-
 type Owner @entity {
   id: ID!
   ownedPlots: [Plot!]! @derivedFrom(field: "owner")
-  # ownedTokens: [Token!]! @derivedFrom(field: "owner")
-  # balance: BigInt
-}
-
-type Contract @entity {
-  id: ID!
-  name: String
-  # symbol: String
-  # totalSupply: BigInt
-  # mintedTokens: [Token!]! @derivedFrom(field: "contract")
 }
 
 type Plot @entity {
   id: ID!
   owner: Owner!
+  purchase: Purchase!
 }
-
-# type Transfer @entity {
-#   id: ID!
-#   # token: Token!
-#   from: Owner
-#   to: Owner
-#   timestamp: BigInt!
-#   block: Int!
-#   transactionHash: String!
-# }
 
 type Purchase @entity {
   id: ID!
-  plot: Plot!
+  plots: [Plot!]! @derivedFrom(field: "purchase")
   buyer: Owner!
   referrer: Owner
   boughtWithCredits: Boolean!
   timestamp: BigInt!
   block: Int!
-  transactionHash: String!
 }

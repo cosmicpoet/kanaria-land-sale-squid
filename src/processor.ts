@@ -1,41 +1,65 @@
-import {
-  EvmLogHandlerContext,
-  SubstrateEvmProcessor,
-} from "@subsquid/substrate-evm-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { CHAIN_NODE, contract, createContractEntity } from "./contract";
-import * as erc721 from "./abi/erc721";
-import * as rmrk from "./abi/rmrk";
+import { Store, TypeormDatabase } from "@subsquid/typeorm-store";
+import {
+  BatchContext,
+  EvmLogEvent,
+  SubstrateBatchProcessor,
+  SubstrateBlock,
+} from "@subsquid/substrate-processor";
+import { CHAIN_NODE, contract } from "./contract";
+// import * as erc721 from "./abi/erc721";
+// import * as rmrk from "./abi/rmrk";
 import * as kanaria from "./abi/kanaria";
 import { Owner, Purchase, Plot } from "./model";
 
-const processor = new SubstrateEvmProcessor("moonriver-substrate");
+const database = new TypeormDatabase();
+const processor = new SubstrateBatchProcessor()
+  .setBatchSize(100)
+  .setDataSource({
+    chain: CHAIN_NODE,
+    archive: lookupArchive("moonriver", { release: "FireSquid" }),
+  })
+  .setTypesBundle("moonriver")
+  .addEvmLog(contract.address, {
+    filter: [
+      kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic,
+    ],
+  });
+// .addEvmLog(/* secondContractAdress */, {
+//   filter: [
+//     abi.events["Your event name"].topic,
+//   ],
+// })
 
-processor.setBatchSize(500);
+processor.run(database, async (ctx) => {
+  for (const block of ctx.blocks) {
+    for (const item of block.items) {
+      if (item.name === "EVM.Log") {
+        if (item.event.args.address === contract.address) {
+          if (
+            item.event.args.topics[0] ===
+            kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic
+          ) {
+            await handleKanaria(ctx, block.header, item.event);
+          }
+        }
+        // else if (contractAddress === secondContractAdress) {
 
-processor.setDataSource({
-  chain: CHAIN_NODE,
-  archive: lookupArchive("moonriver")[0].url,
+        // }
+      }
+    }
+  }
 });
 
-processor.setTypesBundle("moonbeam");
-
-processor.addPreHook({ range: { from: 0, to: 0 } }, async (ctx) => {
-  await ctx.store.save(createContractEntity());
-});
-
-processor.addEvmLogHandler(
-  contract.address,
-  {
-    filter: [kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic],
-  },
-  contractLogsHandler
-);
-
-export async function contractLogsHandler(
-  ctx: EvmLogHandlerContext
+export async function handleKanaria(
+  ctx: BatchContext<Store, unknown>,
+  block: SubstrateBlock,
+  event: EvmLogEvent
 ): Promise<void> {
-  const bought = kanaria.events["PlotsBought(uint256[],address,address,bool)"].decode(ctx);
+
+  const bought = kanaria.events[
+    "PlotsBought(uint256[],address,address,bool)"
+  ].decode(event.args);
   const { plotIds, boughtWithCredits } = bought;
 
   let buyer = await ctx.store.get(Owner, bought.buyer);
@@ -50,28 +74,26 @@ export async function contractLogsHandler(
     await ctx.store.save(referrer);
   }
 
+  let purchase = await ctx.store.get(Purchase, event.evmTxHash);
+  if (purchase == null) {
+    purchase = new Purchase({
+      id: event.evmTxHash,
+      buyer,
+      referrer,
+      boughtWithCredits,
+      timestamp: BigInt(block.timestamp),
+      block: block.height,
+    });
+    await ctx.store.save(purchase);
+  }
+
+  const plots = [];
   for (const plotId of plotIds) {
     let plot = await ctx.store.get(Plot, plotId.toString());
     if (plot == null) {
-      plot = new Plot({ id: plotId.toString(), owner: buyer });
-      await ctx.store.save(plot)
-    }
-
-    let purchase = await ctx.store.get(Purchase, `${ctx.txHash}_${plotId.toString()}`);
-    if (purchase == null) {
-      purchase = new Purchase({
-        id: `${ctx.txHash}_${plotId.toString()}`,
-        plot,
-        buyer,
-        referrer,
-        boughtWithCredits,
-        timestamp: BigInt(ctx.substrate.block.timestamp),
-        block: ctx.substrate.block.height,
-        transactionHash: ctx.txHash,
-      })
-      await ctx.store.save(purchase)
+      plot = new Plot({ id: plotId.toString(), owner: buyer, purchase });
+      plots.push(plot);
     }
   }
+  await ctx.store.save(plots);
 }
-
-processor.run();
