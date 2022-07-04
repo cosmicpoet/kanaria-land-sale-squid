@@ -56,7 +56,6 @@ export async function handleKanaria(
   block: SubstrateBlock,
   event: EvmLogEvent
 ): Promise<void> {
-
   const bought = kanaria.events[
     "PlotsBought(uint256[],address,address,bool)"
   ].decode(event.args);
