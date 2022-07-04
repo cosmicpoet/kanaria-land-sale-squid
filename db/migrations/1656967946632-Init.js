@@ -1,5 +1,5 @@
-module.exports = class Init1656966425712 {
-  name = 'Init1656966425712'
+module.exports = class Init1656967946632 {
+  name = 'Init1656967946632'
 
   async up(db) {
     await db.query(`CREATE TABLE "purchase" ("id" character varying NOT NULL, "bought_with_credits" boolean NOT NULL, "timestamp" numeric NOT NULL, "block" integer NOT NULL, "buyer_id" character varying NOT NULL, "referrer_id" character varying, CONSTRAINT "PK_86cc2ebeb9e17fc9c0774b05f69" PRIMARY KEY ("id"))`)
