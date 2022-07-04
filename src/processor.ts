@@ -3,9 +3,11 @@ import {
   SubstrateEvmProcessor,
 } from "@subsquid/substrate-evm-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { CHAIN_NODE, contract, createContractEntity, getContractEntity } from "./contract";
+import { CHAIN_NODE, contract, createContractEntity } from "./contract";
 import * as erc721 from "./abi/erc721";
-import { Owner, Token, Transfer } from "./model";
+import * as rmrk from "./abi/rmrk";
+import * as kanaria from "./abi/kanaria";
+import { Owner, Purchase, Plot } from "./model";
 
 const processor = new SubstrateEvmProcessor("moonriver-substrate");
 
@@ -25,7 +27,7 @@ processor.addPreHook({ range: { from: 0, to: 0 } }, async (ctx) => {
 processor.addEvmLogHandler(
   contract.address,
   {
-    filter: [erc721.events["Transfer(address,address,uint256)"].topic],
+    filter: [kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic],
   },
   contractLogsHandler
 );
@@ -33,46 +35,43 @@ processor.addEvmLogHandler(
 export async function contractLogsHandler(
   ctx: EvmLogHandlerContext
 ): Promise<void> {
-  const transfer =
-    erc721.events["Transfer(address,address,uint256)"].decode(ctx);
+  const bought = kanaria.events["PlotsBought(uint256[],address,address,bool)"].decode(ctx);
+  const { plotIds, boughtWithCredits } = bought;
 
-  let from = await ctx.store.get(Owner, transfer.from);
-  if (from == null) {
-    from = new Owner({ id: transfer.from, balance: 0n });
-    await ctx.store.save(from);
+  let buyer = await ctx.store.get(Owner, bought.buyer);
+  if (buyer == null) {
+    buyer = new Owner({ id: bought.buyer, ownedPlots: [] });
+    await ctx.store.save(buyer);
   }
 
-  let to = await ctx.store.get(Owner, transfer.to);
-  if (to == null) {
-    to = new Owner({ id: transfer.to, balance: 0n });
-    await ctx.store.save(to);
+  let referrer = await ctx.store.get(Owner, bought.referrer);
+  if (referrer == null) {
+    referrer = new Owner({ id: bought.referrer, ownedPlots: [] });
+    await ctx.store.save(referrer);
   }
 
-  let token = await ctx.store.get(Token, transfer.tokenId.toString());
-  if (token == null) {
-    token = new Token({
-      id: transfer.tokenId.toString(),
-      uri: await contract.tokenURI(transfer.tokenId),
-      contract: await getContractEntity(ctx),
-      owner: to,
-    });
-    await ctx.store.save(token);
-  } else {
-    token.owner = to;
-    await ctx.store.save(token);
-  }
+  for (const plotId of plotIds) {
+    let plot = await ctx.store.get(Plot, plotId.toString());
+    if (plot == null) {
+      plot = new Plot({ id: plotId.toString(), owner: buyer });
+      await ctx.store.save(plot)
+    }
 
-  await ctx.store.save(
-    new Transfer({
-      id: ctx.txHash,
-      token,
-      from,
-      to,
-      timestamp: BigInt(ctx.substrate.block.timestamp),
-      block: ctx.substrate.block.height,
-      transactionHash: ctx.txHash,
-    })
-  );
+    let purchase = await ctx.store.get(Purchase, `${ctx.txHash}_${plotId.toString()}`);
+    if (purchase == null) {
+      purchase = new Purchase({
+        id: `${ctx.txHash}_${plotId.toString()}`,
+        plot,
+        buyer,
+        referrer,
+        boughtWithCredits,
+        timestamp: BigInt(ctx.substrate.block.timestamp),
+        block: ctx.substrate.block.height,
+        transactionHash: ctx.txHash,
+      })
+      await ctx.store.save(purchase)
+    }
+  }
 }
 
 processor.run();

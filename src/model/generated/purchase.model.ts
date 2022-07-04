@@ -1,11 +1,11 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
-import {Token} from "./token.model"
+import {Plot} from "./plot.model"
 import {Owner} from "./owner.model"
 
 @Entity_()
-export class Transfer {
-  constructor(props?: Partial<Transfer>) {
+export class Purchase {
+  constructor(props?: Partial<Purchase>) {
     Object.assign(this, props)
   }
 
@@ -13,16 +13,19 @@ export class Transfer {
   id!: string
 
   @Index_()
-  @ManyToOne_(() => Token, {nullable: false})
-  token!: Token
+  @ManyToOne_(() => Plot, {nullable: false})
+  plot!: Plot
+
+  @Index_()
+  @ManyToOne_(() => Owner, {nullable: false})
+  buyer!: Owner
 
   @Index_()
   @ManyToOne_(() => Owner, {nullable: true})
-  from!: Owner | undefined | null
+  referrer!: Owner | undefined | null
 
-  @Index_()
-  @ManyToOne_(() => Owner, {nullable: true})
-  to!: Owner | undefined | null
+  @Column_("bool", {nullable: false})
+  boughtWithCredits!: boolean
 
   @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
   timestamp!: bigint

@@ -1,6 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, OneToMany as OneToMany_} from "typeorm"
-import * as marshal from "./marshal"
-import {Token} from "./token.model"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_} from "typeorm"
 
 @Entity_()
 export class Contract {
@@ -13,13 +11,4 @@ export class Contract {
 
   @Column_("text", {nullable: true})
   name!: string | undefined | null
-
-  @Column_("text", {nullable: true})
-  symbol!: string | undefined | null
-
-  @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: true})
-  totalSupply!: bigint | undefined | null
-
-  @OneToMany_(() => Token, e => e.contract)
-  mintedTokens!: Token[]
 }
