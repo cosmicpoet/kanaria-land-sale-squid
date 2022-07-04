@@ -50,26 +50,25 @@ export async function contractLogsHandler(
     await ctx.store.save(referrer);
   }
 
+  let purchase = await ctx.store.get(Purchase, ctx.txHash);
+  if (purchase == null) {
+    purchase = new Purchase({
+      id: ctx.txHash,
+      buyer,
+      referrer,
+      boughtWithCredits,
+      timestamp: BigInt(ctx.substrate.block.timestamp),
+      block: ctx.substrate.block.height,
+      transactionHash: ctx.txHash,
+    })
+    await ctx.store.save(purchase)
+  }
+
   for (const plotId of plotIds) {
     let plot = await ctx.store.get(Plot, plotId.toString());
     if (plot == null) {
-      plot = new Plot({ id: plotId.toString(), owner: buyer });
+      plot = new Plot({ id: plotId.toString(), owner: buyer, purchase });
       await ctx.store.save(plot)
-    }
-
-    let purchase = await ctx.store.get(Purchase, `${ctx.txHash}_${plotId.toString()}`);
-    if (purchase == null) {
-      purchase = new Purchase({
-        id: `${ctx.txHash}_${plotId.toString()}`,
-        plot,
-        buyer,
-        referrer,
-        boughtWithCredits,
-        timestamp: BigInt(ctx.substrate.block.timestamp),
-        block: ctx.substrate.block.height,
-        transactionHash: ctx.txHash,
-      })
-      await ctx.store.save(purchase)
     }
   }
 }

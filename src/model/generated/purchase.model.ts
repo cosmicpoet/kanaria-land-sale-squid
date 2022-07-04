@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, OneToMany as OneToMany_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
 import {Plot} from "./plot.model"
 import {Owner} from "./owner.model"
@@ -12,9 +12,8 @@ export class Purchase {
   @PrimaryColumn_()
   id!: string
 
-  @Index_()
-  @ManyToOne_(() => Plot, {nullable: false})
-  plot!: Plot
+  @OneToMany_(() => Plot, e => e.purchase)
+  plots!: Plot[]
 
   @Index_()
   @ManyToOne_(() => Owner, {nullable: false})
