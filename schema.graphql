@@ -20,7 +20,13 @@ type Purchase @entity {
   buyer: Owner!
   referrer: Owner
   boughtWithCredits: Boolean!
+  amount: BigInt!
   timestamp: BigInt!
   block: Int!
   transactionHash: String!
+}
+
+type Transfer @entity {
+  id: ID!
+  value: BigInt!
 }

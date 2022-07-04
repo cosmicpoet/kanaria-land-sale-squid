@@ -3,11 +3,10 @@ import {
   SubstrateEvmProcessor,
 } from "@subsquid/substrate-evm-processor";
 import { lookupArchive } from "@subsquid/archive-registry";
-import { CHAIN_NODE, contract, createContractEntity } from "./contract";
-import * as erc721 from "./abi/erc721";
+import { CHAIN_NODE, contractKanaria, contractRMRK } from "./contract";
 import * as rmrk from "./abi/rmrk";
 import * as kanaria from "./abi/kanaria";
-import { Owner, Purchase, Plot } from "./model";
+import { Owner, Purchase, Plot, Transfer } from "./model";
 
 const processor = new SubstrateEvmProcessor("moonriver-substrate");
 
@@ -20,19 +19,41 @@ processor.setDataSource({
 
 processor.setTypesBundle("moonbeam");
 
-processor.addPreHook({ range: { from: 0, to: 0 } }, async (ctx) => {
-  await ctx.store.save(createContractEntity());
-});
+// processor.addPreHook({ range: { from: 0, to: 0 } }, async (ctx) => {
+//   await ctx.store.save(createContractEntity());
+// });
 
 processor.addEvmLogHandler(
-  contract.address,
+  contractKanaria.address,
   {
     filter: [kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic],
   },
-  contractLogsHandler
+  handleKanaria
 );
 
-export async function contractLogsHandler(
+processor.addEvmLogHandler(
+  contractRMRK.address,
+  {
+    filter: [rmrk.events["Transfer(address,address,uint256)"].topic],
+  },
+  handleRMRK
+);
+
+export async function handleRMRK(
+  ctx: EvmLogHandlerContext
+): Promise<void> {
+  const transferEvent = rmrk.events["Transfer(address,address,uint256)"].decode(ctx);
+  const { txHash } = ctx;
+  const transfer = await ctx.store.get(Transfer, txHash);
+  if (transfer == null) {
+    await ctx.store.save(new Transfer({id: txHash, value: transferEvent.value.toBigInt()}));
+  } else {
+    transfer.value += transferEvent.value.toBigInt();
+    await ctx.store.save(transfer);
+  }
+}
+
+export async function handleKanaria(
   ctx: EvmLogHandlerContext
 ): Promise<void> {
   const bought = kanaria.events["PlotsBought(uint256[],address,address,bool)"].decode(ctx);
@@ -57,6 +78,7 @@ export async function contractLogsHandler(
       buyer,
       referrer,
       boughtWithCredits,
+      amount: 0n,
       timestamp: BigInt(ctx.substrate.block.timestamp),
       block: ctx.substrate.block.height,
       transactionHash: ctx.txHash,

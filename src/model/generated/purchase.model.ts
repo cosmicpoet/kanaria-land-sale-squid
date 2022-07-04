@@ -27,6 +27,9 @@ export class Purchase {
   boughtWithCredits!: boolean
 
   @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+  amount!: bigint
+
+  @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
   timestamp!: bigint
 
   @Column_("integer", {nullable: false})
