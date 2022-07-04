@@ -1,4 +1,5 @@
-import { assertNotNull, Store } from "@subsquid/substrate-evm-processor";
+import {assertNotNull} from "@subsquid/substrate-processor";
+import {Store} from "@subsquid/typeorm-store";
 import { ethers } from "ethers";
 import * as erc721 from "./abi/erc721";
 import * as kanaria from "./abi/kanaria";
