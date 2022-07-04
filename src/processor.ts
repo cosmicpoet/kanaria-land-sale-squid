@@ -6,9 +6,9 @@ import {
   SubstrateBatchProcessor,
   SubstrateBlock,
 } from "@subsquid/substrate-processor";
-import { CHAIN_NODE, contract } from "./contract";
-// import * as erc721 from "./abi/erc721";
-// import * as rmrk from "./abi/rmrk";
+import { CHAIN_NODE, contract, createContractEntity } from "./contract";
+import * as erc721 from "./abi/erc721";
+import * as rmrk from "./abi/rmrk";
 import * as kanaria from "./abi/kanaria";
 import { Owner, Purchase, Plot } from "./model";
 
@@ -33,6 +33,8 @@ const processor = new SubstrateBatchProcessor()
 
 processor.run(database, async (ctx) => {
   for (const block of ctx.blocks) {
+    if (block.header.height === 0) await ctx.store.save(createContractEntity());
+
     for (const item of block.items) {
       if (item.name === "EVM.Log") {
         if (item.event.args.address === contract.address) {
@@ -40,7 +42,7 @@ processor.run(database, async (ctx) => {
             item.event.args.topics[0] ===
             kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic
           ) {
-            await handleKanaria(ctx, block.header, item.event);
+            await contractLogsHandler(ctx, block.header, item.event);
           }
         }
         // else if (contractAddress === secondContractAdress) {
@@ -51,12 +53,11 @@ processor.run(database, async (ctx) => {
   }
 });
 
-export async function handleKanaria(
+export async function contractLogsHandler(
   ctx: BatchContext<Store, unknown>,
   block: SubstrateBlock,
   event: EvmLogEvent
 ): Promise<void> {
-
   const bought = kanaria.events[
     "PlotsBought(uint256[],address,address,bool)"
   ].decode(event.args);
@@ -91,9 +92,26 @@ export async function handleKanaria(
   for (const plotId of plotIds) {
     let plot = await ctx.store.get(Plot, plotId.toString());
     if (plot == null) {
-      plot = new Plot({ id: plotId.toString(), owner: buyer, purchase });
-      plots.push(plot);
+      plot = new Plot({ id: plotId.toString(), owner: buyer });
+      await ctx.store.save(plot);
+    }
+
+    let purchase = await ctx.store.get(
+      Purchase,
+      `${event.evmTxHash}_${plotId.toString()}`
+    );
+    if (purchase == null) {
+      purchase = new Purchase({
+        id: `${event.evmTxHash}_${plotId.toString()}`,
+        plot,
+        buyer,
+        referrer,
+        boughtWithCredits,
+        timestamp: BigInt(block.timestamp),
+        block: block.height,
+        transactionHash: event.evmTxHash,
+      });
+      await ctx.store.save(purchase);
     }
   }
-  await ctx.store.save(plots);
 }
