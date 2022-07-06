@@ -1,27 +1,31 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, OneToMany as OneToMany_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
 import * as marshal from "./marshal"
 import {Plot} from "./plot.model"
-import {Owner} from "./owner.model"
+import {Buyer} from "./buyer.model"
+import {Referrer} from "./referrer.model"
 
 @Entity_()
-export class Purchase {
-  constructor(props?: Partial<Purchase>) {
+export class Sale {
+  constructor(props?: Partial<Sale>) {
     Object.assign(this, props)
   }
 
   @PrimaryColumn_()
   id!: string
 
-  @OneToMany_(() => Plot, e => e.purchase)
+  @OneToMany_(() => Plot, e => e.sale)
   plots!: Plot[]
 
-  @Index_()
-  @ManyToOne_(() => Owner, {nullable: false})
-  buyer!: Owner
+  @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+  amount!: bigint
 
   @Index_()
-  @ManyToOne_(() => Owner, {nullable: true})
-  referrer!: Owner | undefined | null
+  @ManyToOne_(() => Buyer, {nullable: false})
+  buyer!: Buyer
+
+  @Index_()
+  @ManyToOne_(() => Referrer, {nullable: false})
+  referrer!: Referrer
 
   @Column_("bool", {nullable: false})
   boughtWithCredits!: boolean

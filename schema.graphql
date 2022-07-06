@@ -1,20 +1,30 @@
-type Owner @entity {
+type Buyer @entity {
+  id: ID! # buyer
+  ownedPlots: [Plot!]! @derivedFrom(field: "buyer")
+  sales: [Sale!]! @derivedFrom(field: "buyer")
+}
+
+type Referrer @entity {
   id: ID!
-  ownedPlots: [Plot!]! @derivedFrom(field: "owner")
+  referredPlots: [Plot!]! @derivedFrom(field: "referrer")
+  referredSales: [Sale!]! @derivedFrom(field: "referrer")
+}
+
+type Sale @entity {
+  id: ID!
+  plots: [Plot!]! @derivedFrom(field: "sale")
+  amount: BigInt!
+  buyer: Buyer!
+  referrer: Referrer!
+  boughtWithCredits: Boolean!
+  timestamp: BigInt!
+  block: Int!
 }
 
 type Plot @entity {
   id: ID!
-  owner: Owner!
-  purchase: Purchase!
-}
-
-type Purchase @entity {
-  id: ID!
-  plots: [Plot!]! @derivedFrom(field: "purchase")
-  buyer: Owner!
-  referrer: Owner
-  boughtWithCredits: Boolean!
-  timestamp: BigInt!
-  block: Int!
+  plotId: BigInt!
+  buyer: Buyer!
+  referrer: Referrer!
+  sale: Sale!
 }

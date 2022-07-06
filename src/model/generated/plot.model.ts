@@ -1,6 +1,8 @@
 import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, ManyToOne as ManyToOne_, Index as Index_} from "typeorm"
-import {Owner} from "./owner.model"
-import {Purchase} from "./purchase.model"
+import * as marshal from "./marshal"
+import {Buyer} from "./buyer.model"
+import {Referrer} from "./referrer.model"
+import {Sale} from "./sale.model"
 
 @Entity_()
 export class Plot {
@@ -11,11 +13,18 @@ export class Plot {
   @PrimaryColumn_()
   id!: string
 
-  @Index_()
-  @ManyToOne_(() => Owner, {nullable: false})
-  owner!: Owner
+  @Column_("numeric", {transformer: marshal.bigintTransformer, nullable: false})
+  plotId!: bigint
 
   @Index_()
-  @ManyToOne_(() => Purchase, {nullable: false})
-  purchase!: Purchase
+  @ManyToOne_(() => Buyer, {nullable: false})
+  buyer!: Buyer
+
+  @Index_()
+  @ManyToOne_(() => Referrer, {nullable: false})
+  referrer!: Referrer
+
+  @Index_()
+  @ManyToOne_(() => Sale, {nullable: false})
+  sale!: Sale
 }
