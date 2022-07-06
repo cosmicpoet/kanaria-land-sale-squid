@@ -13,6 +13,9 @@ export class Sale {
   @PrimaryColumn_()
   id!: string
 
+  @Column_("text", {nullable: false})
+  txHash!: string
+
   @OneToMany_(() => Plot, e => e.sale)
   plots!: Plot[]
 

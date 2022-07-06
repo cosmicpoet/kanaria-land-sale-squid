@@ -1,8 +1,8 @@
-module.exports = class Init1657071250066 {
-  name = 'Init1657071250066'
+module.exports = class Init1657076765744 {
+  name = 'Init1657076765744'
 
   async up(db) {
-    await db.query(`CREATE TABLE "sale" ("id" character varying NOT NULL, "amount" numeric NOT NULL, "bought_with_credits" boolean NOT NULL, "timestamp" numeric NOT NULL, "block" integer NOT NULL, "buyer_id" character varying NOT NULL, "referrer_id" character varying NOT NULL, CONSTRAINT "PK_d03891c457cbcd22974732b5de2" PRIMARY KEY ("id"))`)
+    await db.query(`CREATE TABLE "sale" ("id" character varying NOT NULL, "tx_hash" text NOT NULL, "amount" numeric NOT NULL, "bought_with_credits" boolean NOT NULL, "timestamp" numeric NOT NULL, "block" integer NOT NULL, "buyer_id" character varying NOT NULL, "referrer_id" character varying NOT NULL, CONSTRAINT "PK_d03891c457cbcd22974732b5de2" PRIMARY KEY ("id"))`)
     await db.query(`CREATE INDEX "IDX_2296c3d55ec8891ef2be15d341" ON "sale" ("buyer_id") `)
     await db.query(`CREATE INDEX "IDX_21dfbb45047889bfac1afe4578" ON "sale" ("referrer_id") `)
     await db.query(`CREATE TABLE "referrer" ("id" character varying NOT NULL, CONSTRAINT "PK_6af2ce99a84db81dbb3622a7335" PRIMARY KEY ("id"))`)

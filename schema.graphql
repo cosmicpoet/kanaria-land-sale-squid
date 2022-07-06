@@ -12,6 +12,7 @@ type Referrer @entity {
 
 type Sale @entity {
   id: ID!
+  txHash: String!
   plots: [Plot!]! @derivedFrom(field: "sale")
   amount: BigInt!
   buyer: Buyer!
