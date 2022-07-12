@@ -13,6 +13,7 @@
   "rules": {
     // https://basarat.gitbooks.io/typescript/docs/tips/defaultIsBad.html
     "import/prefer-default-export": "off",
+    "import/extensions": "warn",
     "import/no-default-export": "error",
     // "import/no-cycle": "off",
     "max-classes-per-file": ["error", 5],

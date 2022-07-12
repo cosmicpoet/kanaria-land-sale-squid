@@ -7,9 +7,10 @@ import {
 } from "@subsquid/substrate-processor"
 import { BigNumber } from "ethers"
 
-import { CHAIN_NODE, contractKanaria, contractRMRK } from "./contract"
+import { CHAIN_NODE, contractKanaria, contractKanariaNew, contractRMRK } from "./contract"
 import * as rmrk from "./abi/rmrk"
 import * as kanaria from "./abi/kanaria"
+import * as kanariaNew from "./abi/kanariaNew"
 import { Buyer, Referrer, Sale, Plot } from "./model"
 
 // types and interfaces
@@ -68,14 +69,18 @@ async function processBatches(ctx: Context) {
       if (item.name === "EVM.Log") {
         const txHash = item.event.evmTxHash
         // create a saleTransaction for each PlotsBought event log, and populate the map
-        if (item.event.args.address === contractKanaria.address) {
+        if (item.event.args.address === contractKanaria.address || item.event.args.address === contractKanariaNew.address) {
+          const topic = item.event.args.topics[0];
+          const eventsList = [
+            kanaria.events["PlotsBought(uint256[],address,address,bool)"],
+            kanariaNew.events["PlotsBought(uint256[],address,address,bool)"],
+          ];
+          const targetEvent = eventsList.find(event => event.topic === topic);
+
           if (
-            item.event.args.topics[0] ===
-            kanaria.events["PlotsBought(uint256[],address,address,bool)"].topic
+            targetEvent
           ) {
-            const bought = kanaria.events[
-              "PlotsBought(uint256[],address,address,bool)"
-            ].decode(item.event.args)
+            const bought = targetEvent.decode(item.event.args)
             const saleTransaction = {
               txHash,
               buyer: bought.buyer,
